@@ -228,6 +228,42 @@ public class FinalProj extends Application {
         ball.setEffect(new DropShadow(12, Color.rgb(0, 0, 0, 0.6)));
     }
 
+    /** Draws the scoring boundary used by Player.shotType(). */
+    private Pane makeThreePointLine() {
+        Pane linePane = new Pane();
+        double startAngle = 200.0;
+        double endAngle = 340.0;
+        double startRad = Math.toRadians(startAngle);
+        double endRad = Math.toRadians(endAngle);
+        double leftX = Player.HOOP_X + Player.THREE_POINT_RADIUS * Math.cos(startRad);
+        double lineY = Player.HOOP_Y - Player.THREE_POINT_RADIUS * Math.sin(startRad);
+        double rightX = Player.HOOP_X + Player.THREE_POINT_RADIUS * Math.cos(endRad);
+
+        Arc arc = new Arc(
+            Player.HOOP_X,
+            Player.HOOP_Y,
+            Player.THREE_POINT_RADIUS,
+            Player.THREE_POINT_RADIUS,
+            startAngle,
+            endAngle - startAngle
+        );
+        arc.setType(ArcType.OPEN);
+
+        Line leftSide = new Line(leftX, 0, leftX, lineY);
+        Line rightSide = new Line(rightX, 0, rightX, lineY);
+
+        for (javafx.scene.shape.Shape segment : new javafx.scene.shape.Shape[] { leftSide, arc, rightSide }) {
+            segment.setFill(Color.TRANSPARENT);
+            segment.setStroke(Color.web("#ff9800"));
+            segment.setStrokeWidth(10);
+            segment.setEffect(new DropShadow(10, Color.web("#ff9800", 0.45)));
+        }
+
+        linePane.getChildren().addAll(leftSide, arc, rightSide);
+        linePane.setMouseTransparent(true);
+        return linePane;
+    }
+
     @Override
     public void start(Stage stage) {
         //1. Window icon + title
@@ -607,6 +643,7 @@ public class FinalProj extends Application {
         courtView.setFitWidth(1500);
         courtView.setFitHeight(850);
         courtView.setLayoutX(0); courtView.setLayoutY(0);
+        Pane threePointLine = makeThreePointLine();
 
         // Scoreboard card (top-left)
         Rectangle scoreCard = new Rectangle(20, 20, 320, 110);
@@ -652,6 +689,7 @@ public class FinalProj extends Application {
         //Adds all the stuff to the screen
         rootPane.getChildren().addAll(
             courtView,
+            threePointLine,
             p1Ring, p2Ring,
             p2ImageView, p1ImageView, ball,
             scoreCard, scoreLabel, scoreboard, p1Tag, p2Tag

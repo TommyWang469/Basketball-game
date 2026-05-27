@@ -1,6 +1,11 @@
 package com.example;
 
 public class Player {
+    public static final double HOOP_X = 750.0;
+    public static final double HOOP_Y = 90.0;
+    public static final double THREE_POINT_RADIUS = 520.0;
+    private static final double LAYUP_RADIUS = 165.0;
+
     private int pNum;
     private int nbaplayer;
     private int score;
@@ -91,6 +96,11 @@ public class Player {
         return (shotType() == 1) ? 3 : 2;
     }
 
+    public static boolean isInsideThreePointLine(double playerX, double playerY) {
+        double distFromHoop = Math.sqrt(Math.pow(playerX - HOOP_X, 2) + Math.pow(playerY - HOOP_Y, 2));
+        return distFromHoop <= THREE_POINT_RADIUS;
+    }
+
     public void setPlayerX(double pX){
         x = pX + 50;        //Staggers the ImageView's x coords so it's not the x coord of the Player's top-left corner
     }
@@ -112,15 +122,14 @@ public class Player {
     }
 
     public int shotType(){      //Either Layup, Midrange, or 3pt depending on the Player's location
-        int shotType = 0;
-        if ( (x >= 563 && x <= 937) && (y >= 1 && y <= 212) ){
-            shotType = 3;       //3 = Layup
-        } else if( (x >= 375 && x <= 562) && (y >= 1 && y <= 425) ){
-            shotType = 2;       //2 = Midrange
-        } else{
-            shotType = 1;       //1 = 3pt Shot
+        double distFromHoop = Math.sqrt(Math.pow(x - HOOP_X, 2) + Math.pow(y - HOOP_Y, 2));
+        if (distFromHoop <= LAYUP_RADIUS) {
+            return 3;       //3 = Layup
+        } else if (isInsideThreePointLine(x, y)) {
+            return 2;       //2 = Midrange
+        } else {
+            return 1;       //1 = 3pt Shot
         }
-        return shotType;
     }
 
     public void whoIsWinner(Player player1, Player player2) {

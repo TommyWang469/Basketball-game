@@ -98,9 +98,9 @@ public class Data {
         }
 
         // ===== Everyone else: closer to the basket = higher chance =====
-        // Distance from the rim (rim sits roughly at x=700, y=20 on the court image).
-        double distFromNet = Math.sqrt(Math.pow(p.getPlayerX() - 700, 2)
-                                     + Math.pow(p.getPlayerY() - 20, 2));
+        // Distance from the rim, matching the scoring boundary in Player.
+        double distFromNet = Math.sqrt(Math.pow(p.getPlayerX() - Player.HOOP_X, 2)
+                                     + Math.pow(p.getPlayerY() - Player.HOOP_Y, 2));
 
         // Map distance to a base accuracy. Smaller distance = higher %.
         // Tuned so layups feel automatic and deep 3s feel rare.
