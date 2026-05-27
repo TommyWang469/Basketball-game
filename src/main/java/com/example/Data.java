@@ -85,19 +85,13 @@ public class Data {
         Player p = (pNum == 1) ? player1 : player2;
         int nba = p.getNBA();
 
-        // Defender pressure: closer defender = bigger penalty. 1.0 means defender is 300+ px away.
+        // Defender pressure: closer defender = smaller multiplier, but it should not erase
+        // the main rule that closer shots are easier than deep shots.
         double distBetwnPlayers = getDistBetwnPlayers();
-        double defChance = Math.min(1.0, distBetwnPlayers / 300.0);
+        double defenderSpace = Math.min(1.0, distBetwnPlayers / 300.0);
+        double defenseMultiplier = 0.70 + (0.30 * defenderSpace);
 
-        // ===== Durant special case (nba == 3): "the best player all the time" =====
-        // Equal chance to make from anywhere on the floor — no distance penalty.
-        // Only defender pressure can drop his percentage.
-        if (nba == 3) {
-            double durantBase = 0.60;                     // flat 60% baseline shooter
-            return Math.max(0.20, durantBase * (0.5 + 0.5 * defChance));
-        }
-
-        // ===== Everyone else: closer to the basket = higher chance =====
+        // ===== Closer to the basket = higher chance =====
         // Distance from the rim, matching the scoring boundary in Player.
         double distFromNet = Math.sqrt(Math.pow(p.getPlayerX() - Player.HOOP_X, 2)
                                      + Math.pow(p.getPlayerY() - Player.HOOP_Y, 2));
@@ -115,8 +109,11 @@ public class Data {
         // shotType: 1=3pt, 2=midrange, 3=layup -> column in the table
         double charStat = shooting_pct[nba - 1][shotType];
         double charBonus = (charStat - 0.40) * 0.5;   // ±0.05ish swing around the base
+        if (nba == 3) {
+            charBonus += 0.04;                        // Durant still gets a small star boost.
+        }
 
-        double accuracy = (base + charBonus) * defChance;
+        double accuracy = (base + charBonus) * defenseMultiplier;
         return Math.max(0.05, Math.min(0.92, accuracy));
     }
 
