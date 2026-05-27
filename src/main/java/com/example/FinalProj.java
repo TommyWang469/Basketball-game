@@ -79,6 +79,14 @@ public class FinalProj extends Application {
     //Fields for realtime-based gameplay
     private boolean gameRunning = false;
     private boolean isBallInFlight = false;
+    private static final long BLOCK_WINDOW_MILLIS = 50;
+    private static final double BLOCK_LANE_WIDTH = 95.0;
+    private static final double BLOCK_MAX_DISTANCE = 190.0;
+    private final long[] lastBlockAttemptMillis = new long[3];
+    private int activeShooterNum = 0;
+    private long activeShotStartedMillis = 0;
+    private boolean activeShotResolved = false;
+    private SequentialTransition activeShotAnimation;
 
     // Continuous movement: track which keys are currently held + frame timing
     private final Set<KeyCode> heldKeys = new HashSet<>();
@@ -375,6 +383,7 @@ public class FinalProj extends Application {
         p2ShotsMade = 0; badP2Shots = 0;
         gameRunning = false;
         isBallInFlight = false;
+        clearActiveShot();
         heldKeys.clear();
         lastFrameNanos = 0;
         gameEngine.stop();
@@ -701,28 +710,30 @@ public class FinalProj extends Application {
 
     //Method to map Players' keybinds once the actual Game Loop starts.
     //Movement is continuous: holding a key adds it to heldKeys and the gameEngine
-    //AnimationTimer applies the position update every frame. SHOOT/STEAL stay one-shot.
+    //AnimationTimer applies the position update every frame. SHOOT/BLOCK stay one-shot.
     public void playerMoves(){
         // Clear any stale state from previous matches
         heldKeys.clear();
+        lastBlockAttemptMillis[1] = 0;
+        lastBlockAttemptMillis[2] = 0;
 
         rootPane.setOnKeyPressed(event -> {
             KeyCode code = event.getCode();
 
-            // One-shot actions: SHOOT / STEAL — only fire on the initial press, not repeats
+            // One-shot actions: SHOOT / BLOCK — only fire on the initial press, not repeats
             if (code == KeyCode.E && !heldKeys.contains(KeyCode.E)) {
                 int possessionState = data.getPossession();
                 if (possessionState == 1) {
                     shoot(1);
-                } else if (data.stealProb(1)) {
-                    switchPossession(1, true);
+                } else {
+                    attemptBlock(1);
                 }
             } else if (code == KeyCode.O && !heldKeys.contains(KeyCode.O)) {
                 int possessionState = data.getPossession();
                 if (possessionState == 2) {
                     shoot(2);
-                } else if (data.stealProb(2)) {
-                    switchPossession(2, true);
+                } else {
+                    attemptBlock(2);
                 }
             }
 
@@ -730,6 +741,102 @@ public class FinalProj extends Application {
         });
 
         rootPane.setOnKeyReleased(event -> heldKeys.remove(event.getCode()));
+    }
+
+    private int otherPlayer(int pNum) {
+        return (pNum == 1) ? 2 : 1;
+    }
+
+    private void clearActiveShot() {
+        activeShooterNum = 0;
+        activeShotStartedMillis = 0;
+        activeShotResolved = false;
+        activeShotAnimation = null;
+    }
+
+    private void recordShotAttempt(int pNum) {
+        if (pNum == 1) { p1ShotsMade++; } else { p2ShotsMade++; }
+    }
+
+    private void recordBlockedShot(int shooterNum) {
+        if (shooterNum == 1) { badP1Shots++; } else { badP2Shots++; }
+    }
+
+    private boolean isBlockTimingGood(int defenderNum, long shotStartedMillis) {
+        long blockAttemptMillis = lastBlockAttemptMillis[defenderNum];
+        return blockAttemptMillis > 0
+            && Math.abs(blockAttemptMillis - shotStartedMillis) <= BLOCK_WINDOW_MILLIS;
+    }
+
+    private boolean isDefenderInFrontOfShooter(int shooterNum, int defenderNum) {
+        Player shooter = data.getPlayer(shooterNum);
+        Player defender = data.getPlayer(defenderNum);
+
+        double shooterX = shooter.getPlayerX();
+        double shooterY = shooter.getPlayerY();
+        double defenderX = defender.getPlayerX();
+        double defenderY = defender.getPlayerY();
+
+        double hoopVectorX = Player.HOOP_X - shooterX;
+        double hoopVectorY = Player.HOOP_Y - shooterY;
+        double hoopDistance = Math.sqrt((hoopVectorX * hoopVectorX) + (hoopVectorY * hoopVectorY));
+        if (hoopDistance == 0) {
+            return false;
+        }
+
+        double defenderVectorX = defenderX - shooterX;
+        double defenderVectorY = defenderY - shooterY;
+        double projection = ((defenderVectorX * hoopVectorX) + (defenderVectorY * hoopVectorY)) / hoopDistance;
+        double perpendicular = Math.abs((defenderVectorX * hoopVectorY) - (defenderVectorY * hoopVectorX)) / hoopDistance;
+
+        return projection > 0
+            && projection <= BLOCK_MAX_DISTANCE
+            && perpendicular <= BLOCK_LANE_WIDTH;
+    }
+
+    private void attemptBlock(int defenderNum) {
+        long now = System.currentTimeMillis();
+        lastBlockAttemptMillis[defenderNum] = now;
+
+        if (isBallInFlight
+                && activeShooterNum != 0
+                && activeShooterNum != defenderNum
+                && Math.abs(now - activeShotStartedMillis) <= BLOCK_WINDOW_MILLIS
+                && isDefenderInFrontOfShooter(activeShooterNum, defenderNum)) {
+            onBlock(defenderNum);
+        }
+    }
+
+    private void onBlock(int defenderNum) {
+        if (activeShotResolved) {
+            return;
+        }
+
+        activeShotResolved = true;
+        int shooterNum = activeShooterNum;
+        recordBlockedShot(shooterNum);
+
+        if (activeShotAnimation != null) {
+            activeShotAnimation.stop();
+        }
+
+        ImageView shooterView = (shooterNum == 1) ? p1ImageView : p2ImageView;
+        shooterView.setTranslateX(0);
+        shooterView.setTranslateY(0);
+        shooterView.setScaleX(1.0);
+        shooterView.setScaleY(1.0);
+        ball.setTranslateX(0);
+        ball.setTranslateY(0);
+        Player defender = data.getPlayer(defenderNum);
+        ball.setLayoutX(defender.getPlayerX());
+        ball.setLayoutY(defender.getPlayerY());
+
+        showShotFeedback("BLOCK!", Color.web("#3a8dff"));
+        screenShake(10);
+
+        PauseTransition delay = new PauseTransition(Duration.millis(500));
+        delay.setOnFinished(event -> finishRound(shooterNum, false));
+        delay.play();
     }
 
 
@@ -742,6 +849,18 @@ public class FinalProj extends Application {
         }
 
         isBallInFlight = true;
+        activeShooterNum = pNum;
+        activeShotStartedMillis = System.currentTimeMillis();
+        activeShotResolved = false;
+
+        int defenderNum = otherPlayer(pNum);
+        recordShotAttempt(pNum);
+        if (isBlockTimingGood(defenderNum, activeShotStartedMillis)
+                && isDefenderInFrontOfShooter(pNum, defenderNum)) {
+            onBlock(defenderNum);
+            return;
+        }
+
         Player p = data.getPlayer(pNum);
         boolean make = p.makeOrMiss(data);
 
@@ -800,6 +919,10 @@ public class FinalProj extends Application {
 
         // === 4. After ball reaches rim: SWISH or BRICK ===
         shotTransition.setOnFinished(event -> {
+            if (activeShotResolved) {
+                return;
+            }
+            activeShotResolved = true;
             if (make) {
                 onMake(pNum);
             } else {
@@ -813,12 +936,11 @@ public class FinalProj extends Application {
             new ParallelTransition(rise, new SequentialTransition(release, flight)),
             fall
         );
+        activeShotAnimation = fullShot;
 
         System.out.println("Player 1 Score: " + data.getPlayer(1).getScore()
             + " Player 2 Score: " + data.getPlayer(2).getScore()
             + " DistanceProb: " + data.distanceProb(pNum, 1) + ',' + data.distanceProb(pNum, 2) + ',' + data.distanceProb(pNum, 3));
-
-        if (pNum == 1) { p1ShotsMade++; } else { p2ShotsMade++; }
 
         fullShot.play();
     }
@@ -938,6 +1060,7 @@ public class FinalProj extends Application {
         }
         
         isBallInFlight = false;     //Indicates that the Ball is no longer in the midst of its shot path
+        clearActiveShot();
     }
 
 
