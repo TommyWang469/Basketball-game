@@ -2,7 +2,7 @@
 
 A 1v1 NBA street-ball arcade game built in **JavaFX**. Pick an NBA star, take the court, and race your opponent to **11 points** with shooting, stealing, and shot-clock pressure.
 
-Made by **Evan and Kris**.
+Made by **Tommy Wang**.
 
 ---
 
