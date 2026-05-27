@@ -2,6 +2,12 @@ package com.example;
 
 import java.util.Scanner;
 
+/**
+ * Holds match-level game state and probability calculations.
+ *
+ * <p>{@code Data} owns the two player models, current possession, and the shot
+ * probability formula used by the UI when a player shoots.</p>
+ */
 public class Data {
     private Player player1;
     private Player player2;
@@ -16,6 +22,13 @@ public class Data {
     };
 
 
+    /**
+     * Creates or replaces one of the two players.
+     *
+     * @param pNum player number, 1 or 2
+     * @param nba selected character number from the character-select screen
+     * @param s starting score
+     */
     public void makePlayer(int pNum, int nba, int s) {
         Player player = new Player(pNum, nba, s);
         if (pNum == 1) {
@@ -26,6 +39,12 @@ public class Data {
         }
     }
 
+    /**
+     * Gets a player by game number.
+     *
+     * @param pNum player number, 1 or 2
+     * @return the requested player
+     */
     public Player getPlayer(int pNum) {
         if (pNum == 1) {
             return player1;
@@ -38,6 +57,9 @@ public class Data {
         }*/
     }
 
+    /**
+     * Console-only character selection helper retained from the original prototype.
+     */
     public void selectPlayer() {
         for (int i = 1; i < 3; i++) {
             System.out.println(
@@ -63,6 +85,11 @@ public class Data {
         }
     }
 
+    /**
+     * Gets the player number that currently has the ball.
+     *
+     * @return 1 for player 1, 2 for player 2, or 0 if possession is invalid
+     */
     public int getPossession() {
         if (possession == 1) {
             return 1;
@@ -72,15 +99,35 @@ public class Data {
         return 0;
     }
 
+    /**
+     * Sets possession to a specific player.
+     *
+     * @param possessionState player number that should receive possession
+     */
     public void swapPossession(int possessionState){        //Either Player 1 or 2
         possession = possessionState;
     }
 
+    /**
+     * Calculates the distance between the two players.
+     *
+     * @return distance in pixels
+     */
     public double getDistBetwnPlayers() {       //Distance Formula
         double distance = Math.sqrt(Math.pow(player1.getPlayerX() - player2.getPlayerX(), 2) + Math.pow(player1.getPlayerY() - player2.getPlayerY(), 2));
         return distance;
     }
 
+    /**
+     * Calculates the chance that a shot goes in.
+     *
+     * <p>Durant, character 3, gets a special 90% make chance. Other players use
+     * distance from the hoop, selected character stats, and defender spacing.</p>
+     *
+     * @param pNum shooting player number
+     * @param shotType 1 for three-point, 2 for midrange, 3 for layup
+     * @return make probability between 0.05 and 0.92 for normal players, or 0.90 for Durant
+     */
     public double distanceProb(int pNum, int shotType){
         Player p = (pNum == 1) ? player1 : player2;
         int nba = p.getNBA();
@@ -118,7 +165,12 @@ public class Data {
         return Math.max(0.05, Math.min(0.92, accuracy));
     }
 
-    //TODO: Incomplete
+    /**
+     * Placeholder for an older steal mechanic.
+     *
+     * @param pNum defending player number
+     * @return always {@code true}; the live game now uses timed block attempts instead
+     */
     public boolean stealProb(int pNum){
         return true;
     }

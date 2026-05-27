@@ -1,189 +1,248 @@
-# 🏀 Hoops Showdown
+# Hoops Showdown
 
-A 1v1 NBA street-ball arcade game built in **JavaFX**. Pick an NBA star, take the court, and race your opponent to **11 points** with shooting, stealing, and shot-clock pressure.
+A 1v1 street-ball arcade game built with JavaFX. Pick a character, take the court, shoot from inside or outside the arc, time blocks on defense, and race your opponent to 11 points.
 
-Made by **Tommy Wang**.
-
----
-
-## Table of Contents
-- [Requirements](#requirements)
-- [Project Layout](#project-layout)
-- [Compile & Run](#compile--run)
-- [How to Play](#how-to-play)
-- [Controls](#controls)
-- [Game Flow](#game-flow)
-- [Troubleshooting](#troubleshooting)
-
----
+Made by Tommy Wang.
 
 ## Requirements
 
-| Tool   | Version       |
-|--------|---------------|
-| JDK    | **17 or newer** |
-| Maven  | **3.6+**      |
-| OS     | macOS, Windows, or Linux |
+| Tool | Version |
+| --- | --- |
+| JDK | 17 or newer |
+| Maven | 3.6+ |
+| OS | macOS, Windows, or Linux |
 
-JavaFX itself is pulled in automatically as a Maven dependency — you do **not** need to install the JavaFX SDK separately.
+JavaFX is installed through Maven dependencies, so you do not need to install the JavaFX SDK separately.
 
-Check what you have:
+Check your tools:
 
 ```bash
 java -version
 mvn -version
 ```
 
----
+## Quick Start
 
-## Project Layout
+Run the game from the project root:
 
-```
-FullFinalProject/
-├── pom.xml                          # Maven build config (JavaFX plugin + deps)
-├── src/main/java/com/example/
-│   ├── FinalProj.java               # Main JavaFX Application (UI + animations)
-│   ├── Data.java                    # Game state, possession, probabilities
-│   └── Player.java                  # Player model (score, NBA pick, position)
-├── src/main/java/module-info.java   # Java module declaration
-└── src/main/resources/
-    ├── styles.css                   # Visual styling (buttons, scoreboard, etc.)
-    ├── BasketballBackground.png     # Court background
-    ├── Characters.png               # Character select panel
-    ├── Lebron.png, Curry.png, ...   # NBA player sprites
-    ├── Basketball.png               # Window icon
-    └── gametracks.mp3               # In-game music
-```
-
----
-
-## Compile & Run
-
-From the project root (`FullFinalProject/`):
-
-### Run the game (one command)
 ```bash
 mvn javafx:run
 ```
 
-This is the **normal way to play** — Maven downloads dependencies, compiles, and launches the JavaFX window.
+Useful commands:
 
-### Compile only
-```bash
-mvn clean compile
+| Command | Purpose |
+| --- | --- |
+| `mvn javafx:run` | Compile and launch the JavaFX game |
+| `mvn clean compile` | Clean and compile the source code |
+| `mvn test` | Run the Maven test phase |
+| `mvn javadoc:javadoc` | Generate JavaDoc HTML files |
+| `open target/reports/apidocs/index.html` | Open JavaDocs on macOS |
+
+On Windows, open JavaDocs with:
+
+```powershell
+Start-Process target/reports/apidocs/index.html
 ```
 
-### Clean rebuild
+On Linux, open JavaDocs with:
+
 ```bash
-mvn clean compile && mvn javafx:run
+xdg-open target/reports/apidocs/index.html
 ```
 
-> ⚠️ `mvn run` will **not** work — `run` isn't a Maven lifecycle phase. Always use `mvn javafx:run`.
+Important: `mvn run` is not a valid Maven command for this project. Use `mvn javafx:run`.
 
----
+## Project Layout
+
+```text
+Basketball-game/
+├── pom.xml
+├── README.md
+├── src/main/java/
+│   ├── module-info.java
+│   └── com/example/
+│       ├── FinalProj.java      # JavaFX app, screens, controls, animations
+│       ├── Data.java           # Game state and shot probability logic
+│       └── Player.java         # Player model, scoring, shot zones
+└── src/main/resources/
+    ├── styles.css              # JavaFX CSS
+    ├── BasketballBackground.png
+    ├── Characters.png          # Character-select roster art
+    ├── Lebron.png
+    ├── Curry.png
+    ├── Durant.png
+    ├── Antetokounmpo.png
+    ├── Doncic.png
+    ├── Basketball.png
+    └── gametracks.mp3
+```
+
+Generated build files live in `target/`. They are ignored by Git and should not be committed.
 
 ## How to Play
 
-The game is a **first-to-11** 1v1 basketball match between two players on the **same keyboard**.
+Hoops Showdown is a same-keyboard 1v1 game.
 
-### 1. Welcome screen
-Press **PRESS TO START** to begin.
+1. Press `PRESS TO START`.
+2. Player 1 selects a character with number keys `1` through `5`, then clicks `DONE`.
+3. Player 2 selects a different character, then clicks `BEGIN MATCH`.
+4. Player 2 starts with the ball.
+5. First player to reach 11 points wins.
 
-### 2. Character Select — Player 1
-Press a number key **1–5** to pick your NBA star, then click **DONE**.
+## Characters
 
-| Key | Character        |
-|-----|------------------|
-| 1   | LeBron James     |
-| 2   | Stephen Curry    |
-| 3   | Kevin Durant     |
-| 4   | Giannis Antetokounmpo |
-| 5   | Luka Dončić      |
+| Key | Character |
+| --- | --- |
+| `1` | LeBron James |
+| `2` | Stephen Curry |
+| `3` | Kevin Durant |
+| `4` | Giannis Antetokounmpo |
+| `5` | Luka Doncic |
 
-Each character has slightly different shooting and stealing tendencies — pick your style.
+Character art has been upgraded to detailed arcade-style transparent PNG sprites.
 
-### 3. Character Select — Player 2
-Press an **unselected** number (you can't double up on the same star), then click **BEGIN MATCH**.
-
-Player 2 starts with the ball.
-
-### 4. The match
-Move your character, dribble (the ball follows whoever has possession), and press your shoot key when you're in a good spot. The ball arcs toward the rim — make it for points, miss for a turnover.
-
-**First to 11 points wins.**
-
-### 5. Game Over
-A final stat sheet appears showing each player's score, makes, misses, and total attempts.
-
----
+Special gameplay note: Kevin Durant is character 3 and currently has a 90% shot make chance.
 
 ## Controls
 
-The two players share one keyboard.
+### Player 1
 
-### Player 1 (left side, green ring)
 | Action | Key |
-|--------|-----|
-| Move up    | `W` |
-| Move left  | `A` |
-| Move down  | `S` |
+| --- | --- |
+| Move up | `W` |
+| Move left | `A` |
+| Move down | `S` |
 | Move right | `D` |
-| Shoot / Steal | `E` |
+| Shoot / Block | `E` |
 
-### Player 2 (right side, pink ring)
+### Player 2
+
 | Action | Key |
-|--------|-----|
-| Move up    | `I` |
-| Move left  | `J` |
-| Move down  | `K` |
+| --- | --- |
+| Move up | `I` |
+| Move left | `J` |
+| Move down | `K` |
 | Move right | `L` |
-| Shoot / Steal | `O` |
+| Shoot / Block | `O` |
 
-### Shoot vs. Steal
-The `E` / `O` key is **context-sensitive**:
-- **If you have the ball** → you shoot. Your character dips, leaps, releases, and the ball arcs to the rim.
-- **If your opponent has the ball** → you attempt a steal. A successful steal is announced with a red **STEAL!!** banner.
+## Gameplay Rules
 
----
+### Shooting
 
-## Game Flow
+If you have the ball, press your shoot key to jump and release a shot. The ball follows a curved path to the rim.
 
-1. **Setup** — Each round resets both players to their starting positions, with the loser of the previous point on offense (winner's-out... actually, *loser's ball* — keep it fair).
-2. **Possession** — The ball is glued to whoever has it. The other player can attempt a steal.
-3. **Shot** — Press your shoot key:
-   - Shooter **dips** then **leaps**
-   - Ball is released at the peak and follows a **parabolic arc**
-   - Ball **spins** in flight
-   - On **make**: `SWISH!` popup + screen shake, scoreboard updates, the scorer keeps possession.
-   - On **miss**: `BRICK!` popup, ball bounces off the rim, the other player gets the ball.
-4. **End** — First to **11 points** wins. The Game Over screen shows full stats.
+Scoring:
 
----
+| Shot location | Points |
+| --- | --- |
+| Inside the three-point line | 2 |
+| Outside the three-point line | 3 |
+
+Shot chance is based on distance from the rim, defender spacing, character stats, and special character rules.
+
+### Blocking
+
+If you do not have the ball, your shoot key becomes a block attempt.
+
+A block succeeds only when:
+
+- the defender presses within 50 ms of the offensive shot,
+- the defender is in front of the shooter toward the rim,
+- the defender is close enough to the shooting lane.
+
+On a successful block, the shot is canceled, `BLOCK!` appears, and the defender starts the next round on offense.
+
+### Round Flow
+
+- Made shot: score updates and the shooter keeps possession.
+- Missed shot: the other player gets possession.
+- Blocked shot: the defender gets possession.
+- Game over: first to 11 wins and the stats screen appears.
+
+## JavaDoc and Annotations
+
+The main classes now include JavaDoc annotations such as `@param` and `@return` on important public methods. These annotations are used by the JavaDoc generator to build readable API documentation.
+
+Generate JavaDocs:
+
+```bash
+mvn javadoc:javadoc
+```
+
+Open the generated docs on macOS:
+
+```bash
+open target/reports/apidocs/index.html
+```
+
+The generated JavaDoc entry point is:
+
+```text
+target/reports/apidocs/index.html
+```
+
+## Architecture Notes
+
+| File | Responsibility |
+| --- | --- |
+| `FinalProj.java` | JavaFX screens, keyboard input, animation loop, shots, blocks, visual effects |
+| `Data.java` | Player storage, possession, distance and probability calculations |
+| `Player.java` | Character selection value, score, position, shot type, point value |
+| `styles.css` | Buttons, scoreboard, titles, stats screen styling |
+
+Key implementation details:
+
+- Movement uses `AnimationTimer` and held-key tracking for smooth motion.
+- Shot animation uses `PathTransition` with `QuadCurveTo` for a parabolic arc.
+- The three-point line is drawn in JavaFX and uses the same hoop/radius constants as scoring.
+- Blocking uses a small timing window plus a geometric lane check.
+- Visual polish includes player shadows, nameplates, court overlays, and generated sprite assets.
 
 ## Troubleshooting
 
 ### `Unknown lifecycle phase "run"`
-You typed `mvn run`. Use `mvn javafx:run` instead.
+
+Use:
+
+```bash
+mvn javafx:run
+```
+
+Do not use `mvn run`.
 
 ### `Error: JavaFX runtime components are missing`
-Run via Maven (`mvn javafx:run`), not by invoking `java` directly on the compiled class. The Maven plugin sets up the JavaFX module path for you.
+
+Launch through Maven so the JavaFX module path is configured correctly:
+
+```bash
+mvn javafx:run
+```
 
 ### `release version 17 not supported`
-Your JDK is older than 17. Install JDK 17+ and make sure `java -version` reports 17 or newer.
 
-### Window opens but no music
-Confirm `gametracks.mp3` is present in `src/main/resources/`. Some Linux systems also need GStreamer installed for JavaFX media.
+Your active JDK is older than 17. Install JDK 17 or newer and confirm:
 
-### Native-access warnings on JDK 17+
-Harmless. They come from JavaFX 21 internals and don't affect gameplay.
+```bash
+java -version
+```
 
----
+### Music does not play
 
-## Tech Notes
+Confirm `src/main/resources/gametracks.mp3` exists. Some Linux systems may also need native media/GStreamer support for JavaFX media playback.
 
-- **JavaFX 21** for rendering and animation
-- Animations use `PathTransition`, `ParallelTransition`, `SequentialTransition`, `RotateTransition`, and `ScaleTransition`
-- Visual styling lives in [`src/main/resources/styles.css`](src/main/resources/styles.css)
-- Shot mechanics combine `QuadCurveTo` paths (parabolic arcs) with shooter jump animations for a realistic shooting motion
+### JavaDoc command cannot find `javadoc`
 
-Have fun, and **first to 11 wins!** 🏆
+Make sure you are using a full JDK, not just a JRE:
+
+```bash
+javadoc -version
+```
+
+## Git Notes
+
+- Keep source files and resources committed.
+- Do not commit `target/`; it is generated by Maven.
+- The upgraded PNG character assets are project resources and should be committed.
+
+Have fun. First to 11 wins.

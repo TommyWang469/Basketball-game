@@ -49,6 +49,13 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.QuadCurveTo;
 
+/**
+ * Main JavaFX application for Hoops Showdown.
+ *
+ * <p>This class builds the screens, owns the animation loop, handles keyboard
+ * input, and coordinates game events such as shots, blocks, round resets, and
+ * the final stats screen.</p>
+ */
 public class FinalProj extends Application {
 
     // MediaPlayer plays a short WAV sound when the button is clicked
@@ -59,11 +66,14 @@ public class FinalProj extends Application {
 
     //Main mechanism for the GUI
     private Scene scene;
+    /** Root container for every screen in the JavaFX scene. */
     public Pane rootPane = new Pane();
 
     //Data and Player ImageViews
     private Data data = new Data();
+    /** Image node for player 1's selected character. */
     public ImageView p1ImageView = new ImageView();
+    /** Image node for player 2's selected character. */
     public ImageView p2ImageView = new ImageView();
 
     //The Ball
@@ -403,6 +413,11 @@ public class FinalProj extends Application {
         return detail;
     }
 
+    /**
+     * Initializes the stage and shows the welcome screen.
+     *
+     * @param stage primary JavaFX stage
+     */
     @Override
     public void start(Stage stage) {
         //1. Window icon + title
@@ -533,7 +548,7 @@ public class FinalProj extends Application {
 
 
 
-    //Methods to select Character
+    /** Shows the character-select screen for player 1. */
     public void select1Char(){
         buildSelectScreen(1, -1);
     }
@@ -541,7 +556,7 @@ public class FinalProj extends Application {
 
 
 
-    //May or may not need
+    /** Shows the character-select screen for player 2 with player 1's pick locked. */
     public void select2Char(){
         buildSelectScreen(2, data.getPlayer(1).getNBA());
     }
@@ -666,6 +681,12 @@ public class FinalProj extends Application {
 
 
 
+    /**
+     * Moves possession and the ball to a player.
+     *
+     * @param pNum player number that should receive the ball
+     * @param steal whether to show the legacy steal banner
+     */
     public void switchPossession(int pNum, boolean steal){
         //Shows a temporary message indicating that a STEAL occurred
         if (steal){
@@ -686,6 +707,11 @@ public class FinalProj extends Application {
 
 
 
+    /**
+     * Loads the selected character image into the correct player ImageView.
+     *
+     * @param pNum player number whose image should be refreshed
+     */
     public void playerNBAImage(int pNum){       //Depending on the key press, maps the image of the chosen NBA Character
         Player p = data.getPlayer(pNum);
         int pNBA = p.getNBA();
@@ -731,6 +757,11 @@ public class FinalProj extends Application {
 
 
 
+    /**
+     * Resets both players, the ball, and possession for a new round.
+     *
+     * @param pNum player number that starts the next round with possession
+     */
     public void resetPos(int pNum){     //Resets the Position of everything, which is useful after each 'round' or each shot made
         Player p1 = data.getPlayer(1);
         playerNBAImage(1);
@@ -772,6 +803,11 @@ public class FinalProj extends Application {
 
 
 
+    /**
+     * Builds the in-game court screen for a new or resumed round.
+     *
+     * @param pNum player number that starts with possession
+     */
     public void setupState(int pNum){
         //Clearing the screen and adding the new images
         rootPane.getChildren().clear();
@@ -836,9 +872,12 @@ public class FinalProj extends Application {
 
 
 
-    //Method to map Players' keybinds once the actual Game Loop starts.
-    //Movement is continuous: holding a key adds it to heldKeys and the gameEngine
-    //AnimationTimer applies the position update every frame. SHOOT/BLOCK stay one-shot.
+    /**
+     * Registers keyboard controls for movement, shooting, and timed blocks.
+     *
+     * <p>Movement is continuous through the game loop. Shoot/block keys are
+     * handled only on their initial press so holding a key does not spam shots.</p>
+     */
     public void playerMoves(){
         // Clear any stale state from previous matches
         heldKeys.clear();
@@ -970,7 +1009,11 @@ public class FinalProj extends Application {
 
 
 
-    //Method for Ball movement when SHOOT
+    /**
+     * Starts a shot attempt for the player with possession.
+     *
+     * @param pNum shooting player number
+     */
     public void shoot(int pNum){
         if (isBallInFlight){
             return;     //Can't SHOOT when the Ball is currently in the air
@@ -1154,6 +1197,12 @@ public class FinalProj extends Application {
 
 
 
+    /**
+     * Completes a shot sequence and starts the next round or stats screen.
+     *
+     * @param shooterNum player number that attempted the shot
+     * @param made whether the shot was made
+     */
     public void finishRound(int shooterNum, boolean made){
         int nextPossession = 0;
         Player p1 = data.getPlayer(1);
@@ -1194,7 +1243,7 @@ public class FinalProj extends Application {
 
 
 
-    //TODO
+    /** Shows the post-game score and shooting statistics. */
     public void statsScreen(){
         rootPane.getChildren().clear();
 
@@ -1338,6 +1387,11 @@ public class FinalProj extends Application {
 
 
     
+    /**
+     * Application entry point.
+     *
+     * @param args command-line arguments passed by JavaFX
+     */
     public static void main(String[] args) {
         System.out.println("JavaFX version: " + System.getProperty("javafx.runtime.version"));
         launch(args);
