@@ -85,6 +85,10 @@ public class Data {
         Player p = (pNum == 1) ? player1 : player2;
         int nba = p.getNBA();
 
+        if (nba == 3) {
+            return 0.90;
+        }
+
         // Defender pressure: closer defender = smaller multiplier, but it should not erase
         // the main rule that closer shots are easier than deep shots.
         double distBetwnPlayers = getDistBetwnPlayers();
@@ -109,9 +113,6 @@ public class Data {
         // shotType: 1=3pt, 2=midrange, 3=layup -> column in the table
         double charStat = shooting_pct[nba - 1][shotType];
         double charBonus = (charStat - 0.40) * 0.5;   // ±0.05ish swing around the base
-        if (nba == 3) {
-            charBonus += 0.04;                        // Durant still gets a small star boost.
-        }
 
         double accuracy = (base + charBonus) * defenseMultiplier;
         return Math.max(0.05, Math.min(0.92, accuracy));
