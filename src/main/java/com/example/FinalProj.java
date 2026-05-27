@@ -25,6 +25,7 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
+import javafx.scene.shape.Ellipse;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.Glow;
 import javafx.scene.image.Image;
@@ -215,6 +216,18 @@ public class FinalProj extends Application {
         }
     }
 
+    /** Compact label for in-game player nameplates. */
+    private String shortNbaName(int nba) {
+        switch (nba) {
+            case 1: return "LEBRON";
+            case 2: return "CURRY";
+            case 3: return "DURANT";
+            case 4: return "GIANNIS";
+            case 5: return "LUKA";
+            default: return "PLAYER";
+        }
+    }
+
     /** Style a button using one of the CSS classes in styles.css. */
     private Button styledButton(String text, String variant) {
         Button b = new Button(text);
@@ -270,6 +283,124 @@ public class FinalProj extends Application {
         linePane.getChildren().addAll(leftSide, arc, rightSide);
         linePane.setMouseTransparent(true);
         return linePane;
+    }
+
+    /** Extra court lighting and markings layered above the court image. */
+    private Pane makeCourtPolish() {
+        Pane courtPolish = new Pane();
+        courtPolish.setMouseTransparent(true);
+
+        Rectangle warmWash = new Rectangle(0, 0, COURT_W, COURT_H);
+        warmWash.setFill(new LinearGradient(
+            0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
+            new Stop(0.0, Color.web("#fff1b6", 0.14)),
+            new Stop(0.45, Color.web("#ffffff", 0.02)),
+            new Stop(1.0, Color.web("#5f2b00", 0.12))
+        ));
+
+        Rectangle vignette = new Rectangle(0, 0, COURT_W, COURT_H);
+        vignette.setFill(new RadialGradient(
+            0, 0, 0.50, 0.36, 0.86, true, CycleMethod.NO_CYCLE,
+            new Stop(0.0, Color.TRANSPARENT),
+            new Stop(0.68, Color.web("#000000", 0.04)),
+            new Stop(1.0, Color.web("#000000", 0.28))
+        ));
+
+        Rectangle paintGlow = new Rectangle(Player.HOOP_X - 210, 0, 420, 390);
+        paintGlow.setFill(Color.web("#2b72ff", 0.08));
+        paintGlow.setStroke(Color.web("#ffffff", 0.22));
+        paintGlow.setStrokeWidth(3);
+        paintGlow.setArcWidth(22);
+        paintGlow.setArcHeight(22);
+
+        Arc restricted = new Arc(Player.HOOP_X, Player.HOOP_Y + 190, 130, 72, 0, -180);
+        restricted.setType(ArcType.OPEN);
+        restricted.setFill(Color.TRANSPARENT);
+        restricted.setStroke(Color.web("#ffffff", 0.42));
+        restricted.setStrokeWidth(5);
+
+        Circle rimGlow = new Circle(Player.HOOP_X, Player.HOOP_Y, 64, Color.web("#ff4f1d", 0.16));
+        rimGlow.setEffect(new javafx.scene.effect.GaussianBlur(18));
+
+        for (int x = 150; x < COURT_W; x += 150) {
+            Line grain = new Line(x, 0, x - 70, COURT_H);
+            grain.setStroke(Color.web("#ffffff", 0.07));
+            grain.setStrokeWidth(2);
+            courtPolish.getChildren().add(grain);
+        }
+
+        Line centerLane = new Line(Player.HOOP_X, 0, Player.HOOP_X, COURT_H);
+        centerLane.setStroke(Color.web("#ffffff", 0.10));
+        centerLane.setStrokeWidth(3);
+        centerLane.getStrokeDashArray().addAll(18.0, 24.0);
+
+        courtPolish.getChildren().addAll(warmWash, paintGlow, restricted, rimGlow, centerLane, vignette);
+        return courtPolish;
+    }
+
+    /** Ground detail that makes each character feel planted on the court. */
+    private Pane makePlayerGroundDetail(ImageView playerView, Color accent) {
+        Pane detail = new Pane();
+        detail.setMouseTransparent(true);
+        detail.layoutXProperty().bind(playerView.layoutXProperty());
+        detail.layoutYProperty().bind(playerView.layoutYProperty());
+
+        Ellipse shadow = new Ellipse(50, 142, 54, 16);
+        shadow.setFill(Color.web("#000000", 0.34));
+        shadow.setEffect(new javafx.scene.effect.GaussianBlur(7));
+
+        Circle aura = new Circle(50, 82, 58, Color.TRANSPARENT);
+        aura.setStroke(accent.deriveColor(0, 1.0, 1.2, 0.55));
+        aura.setStrokeWidth(4);
+        aura.setEffect(new DropShadow(18, accent.deriveColor(0, 1.0, 1.0, 0.55)));
+
+        Ellipse reflection = new Ellipse(50, 145, 34, 6);
+        reflection.setFill(accent.deriveColor(0, 1.0, 1.2, 0.18));
+        reflection.setEffect(new javafx.scene.effect.GaussianBlur(5));
+
+        detail.getChildren().addAll(shadow, aura, reflection);
+        return detail;
+    }
+
+    /** Floating identity detail for each player figure. */
+    private Pane makePlayerTopDetail(int pNum, ImageView playerView, Color accent) {
+        Pane detail = new Pane();
+        detail.setMouseTransparent(true);
+        detail.layoutXProperty().bind(playerView.layoutXProperty());
+        detail.layoutYProperty().bind(playerView.layoutYProperty());
+
+        Rectangle plate = new Rectangle(-8, 4, 116, 32);
+        plate.setFill(Color.web("#080d1f", 0.82));
+        plate.setStroke(accent.deriveColor(0, 1.0, 1.15, 0.95));
+        plate.setStrokeWidth(2);
+        plate.setArcWidth(18);
+        plate.setArcHeight(18);
+        plate.setEffect(new DropShadow(10, Color.web("#000000", 0.55)));
+
+        Circle chip = new Circle(12, 20, 18);
+        chip.setFill(accent);
+        chip.setStroke(Color.WHITE);
+        chip.setStrokeWidth(2);
+
+        Text playerNumber = new Text("P" + pNum);
+        playerNumber.setFill(Color.web("#07101f"));
+        playerNumber.setFont(Font.font("Helvetica Neue", FontWeight.BLACK, 14));
+        playerNumber.setLayoutX(1);
+        playerNumber.setLayoutY(25);
+
+        Text name = new Text(shortNbaName(data.getPlayer(pNum).getNBA()));
+        name.setFill(Color.WHITE);
+        name.setFont(Font.font("Helvetica Neue", FontWeight.BLACK, 15));
+        name.setLayoutX(34);
+        name.setLayoutY(25);
+        name.setEffect(new DropShadow(5, Color.web("#000000", 0.7)));
+
+        Line topAccent = new Line(38, 9, 96, 9);
+        topAccent.setStroke(accent.deriveColor(0, 1.0, 1.25, 0.85));
+        topAccent.setStrokeWidth(2);
+
+        detail.getChildren().addAll(plate, chip, playerNumber, name, topAccent);
+        return detail;
     }
 
     @Override
@@ -652,6 +783,7 @@ public class FinalProj extends Application {
         courtView.setFitWidth(1500);
         courtView.setFitHeight(850);
         courtView.setLayoutX(0); courtView.setLayoutY(0);
+        Pane courtPolish = makeCourtPolish();
         Pane threePointLine = makeThreePointLine();
 
         // Scoreboard card (top-left)
@@ -676,31 +808,25 @@ public class FinalProj extends Application {
         scoreboard.getStyleClass().add("scoreboard-value");
         scoreboard.setLayoutX(110); scoreboard.setLayoutY(110);
 
-        // Soft glow rings to mark each player on the court
-        Circle p1Ring = new Circle(50, Color.TRANSPARENT);
-        p1Ring.setStroke(Color.web("#34d27a", 0.7));
-        p1Ring.setStrokeWidth(3);
-        p1Ring.setEffect(new DropShadow(15, Color.web("#34d27a", 0.7)));
-        p1Ring.centerXProperty().bind(p1ImageView.layoutXProperty().add(50));
-        p1Ring.centerYProperty().bind(p1ImageView.layoutYProperty().add(80));
-
-        Circle p2Ring = new Circle(50, Color.TRANSPARENT);
-        p2Ring.setStroke(Color.web("#ff5577", 0.7));
-        p2Ring.setStrokeWidth(3);
-        p2Ring.setEffect(new DropShadow(15, Color.web("#ff5577", 0.7)));
-        p2Ring.centerXProperty().bind(p2ImageView.layoutXProperty().add(50));
-        p2Ring.centerYProperty().bind(p2ImageView.layoutYProperty().add(80));
+        Color p1Accent = Color.web("#34d27a");
+        Color p2Accent = Color.web("#ff5577");
+        Pane p1Ground = makePlayerGroundDetail(p1ImageView, p1Accent);
+        Pane p2Ground = makePlayerGroundDetail(p2ImageView, p2Accent);
+        Pane p1Top = makePlayerTopDetail(1, p1ImageView, p1Accent);
+        Pane p2Top = makePlayerTopDetail(2, p2ImageView, p2Accent);
 
         // Player drop shadows
-        p1ImageView.setEffect(new DropShadow(12, Color.rgb(0,0,0,0.6)));
-        p2ImageView.setEffect(new DropShadow(12, Color.rgb(0,0,0,0.6)));
+        p1ImageView.setEffect(new DropShadow(18, Color.rgb(0,0,0,0.72)));
+        p2ImageView.setEffect(new DropShadow(18, Color.rgb(0,0,0,0.72)));
 
         //Adds all the stuff to the screen
         rootPane.getChildren().addAll(
             courtView,
+            courtPolish,
             threePointLine,
-            p1Ring, p2Ring,
+            p1Ground, p2Ground,
             p2ImageView, p1ImageView, ball,
+            p2Top, p1Top,
             scoreCard, scoreLabel, scoreboard, p1Tag, p2Tag
         );
     }
