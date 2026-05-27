@@ -597,7 +597,7 @@ public class FinalProj extends Application {
 
         // Currently-selected portrait (defaults to Empty)
         ImageView portrait = new ImageView(new Image(getClass().getResource("/Empty.png").toString()));
-        portrait.setFitWidth(320);
+        portrait.setFitHeight(390);
         portrait.setPreserveRatio(true);
         portrait.setLayoutX(1035);
         portrait.setLayoutY(280);
@@ -744,8 +744,10 @@ public class FinalProj extends Application {
 
         //Set coordinates of Attacker and the Defender to the Setup Positions. Need to remember to update the Player objects' x and y Attributes as well.
         p1ImageView.setFitWidth(100);
+        p1ImageView.setFitHeight(0);
         p1ImageView.setPreserveRatio(true);
         p2ImageView.setFitWidth(100);
+        p2ImageView.setFitHeight(0);
         p2ImageView.setPreserveRatio(true);
         if (pNum == 1){
             p1ImageView.setLayoutX(700); p1ImageView.setLayoutY(700);
