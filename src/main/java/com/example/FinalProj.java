@@ -7,12 +7,7 @@ import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.layout.HBox;
-import javafx.geometry.Pos;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
@@ -27,7 +22,6 @@ import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Ellipse;
 import javafx.scene.effect.DropShadow;
-import javafx.scene.effect.Glow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
@@ -52,9 +46,19 @@ import javafx.scene.shape.QuadCurveTo;
 /**
  * Main JavaFX application for Hoops Showdown.
  *
- * <p>This class builds the screens, owns the animation loop, handles keyboard
- * input, and coordinates game events such as shots, blocks, round resets, and
- * the final stats screen.</p>
+ * <p>{@code FinalProj} is the controller for the entire game experience. It
+ * creates the welcome screen, character-select screens, live court view, shot
+ * animations, block timing, score display, and game-over stats screen. It also
+ * connects JavaFX input events to the model classes {@link Data} and
+ * {@link Player}.</p>
+ *
+ * <p>The class intentionally keeps the visual layer in JavaFX nodes while
+ * delegating score and shot-zone decisions to {@link Player} and shot
+ * probability decisions to {@link Data}. This makes it easier to change the
+ * artwork or animations without changing the core scoring rules.</p>
+ *
+ * @see Data
+ * @see Player
  */
 public class FinalProj extends Application {
 
@@ -66,21 +70,36 @@ public class FinalProj extends Application {
 
     //Main mechanism for the GUI
     private Scene scene;
-    /** Root container for every screen in the JavaFX scene. */
+    /**
+     * Root container for every screen in the JavaFX scene.
+     *
+     * <p>The application clears and repopulates this pane when moving between
+     * the welcome screen, character select, gameplay, and stats screen.</p>
+     */
     public Pane rootPane = new Pane();
 
     //Data and Player ImageViews
     private Data data = new Data();
-    /** Image node for player 1's selected character. */
+    /**
+     * Image node for player 1's selected character.
+     *
+     * <p>The node is reused across rounds. Its position is synchronized with
+     * {@link Data#getPlayer(int)} so gameplay calculations can use model
+     * coordinates.</p>
+     */
     public ImageView p1ImageView = new ImageView();
-    /** Image node for player 2's selected character. */
+    /**
+     * Image node for player 2's selected character.
+     *
+     * <p>The node is reused across rounds and receives the selected character
+     * sprite through {@link #playerNBAImage(int)}.</p>
+     */
     public ImageView p2ImageView = new ImageView();
 
     //The Ball
     private Circle ball;
 
-    //Score Fields
-    //TODO
+    // Score and shot-tracking fields.
     private Text scoreboard = new Text();
     private int p1ShotsMade = 0;
     private int badP1Shots = 0;
@@ -414,9 +433,16 @@ public class FinalProj extends Application {
     }
 
     /**
-     * Initializes the stage and shows the welcome screen.
+     * Initializes the JavaFX stage and shows the welcome screen.
      *
-     * @param stage primary JavaFX stage
+     * <p>This method is called by the JavaFX runtime after
+     * {@link #main(String[])} invokes {@link #launch(String...)}. It creates the
+     * reusable basketball node, applies CSS, sizes the scene to the court, and
+     * then delegates the first visible screen to the welcome-screen builder.</p>
+     *
+     * @param stage primary JavaFX stage supplied by the JavaFX runtime
+     * @implNote The root pane is made focus traversable so keyboard controls can
+     * be attached directly to the game surface.
      */
     @Override
     public void start(Stage stage) {
@@ -548,7 +574,14 @@ public class FinalProj extends Application {
 
 
 
-    /** Shows the character-select screen for player 1. */
+    /**
+     * Shows the character-select screen for player 1.
+     *
+     * <p>Player 1 has no locked character because they choose first. The actual
+     * UI construction is handled by the shared character-select builder.</p>
+     *
+     * @see #select2Char()
+     */
     public void select1Char(){
         buildSelectScreen(1, -1);
     }
@@ -556,7 +589,14 @@ public class FinalProj extends Application {
 
 
 
-    /** Shows the character-select screen for player 2 with player 1's pick locked. */
+    /**
+     * Shows the character-select screen for player 2.
+     *
+     * <p>Player 2 cannot choose the same character as player 1. The selected
+     * player 1 character is passed as the locked choice.</p>
+     *
+     * @see #select1Char()
+     */
     public void select2Char(){
         buildSelectScreen(2, data.getPlayer(1).getNBA());
     }
@@ -684,8 +724,15 @@ public class FinalProj extends Application {
     /**
      * Moves possession and the ball to a player.
      *
+     * <p>This method updates both the visible ball position and the possession
+     * value stored in {@link Data}. It is called during round setup and by older
+     * prototype steal code. The current defensive mechanic uses timed blocks,
+     * but the banner path is retained for compatibility with the previous
+     * behavior.</p>
+     *
      * @param pNum player number that should receive the ball
      * @param steal whether to show the legacy steal banner
+     * @see Data#swapPossession(int)
      */
     public void switchPossession(int pNum, boolean steal){
         //Shows a temporary message indicating that a STEAL occurred
@@ -710,7 +757,13 @@ public class FinalProj extends Application {
     /**
      * Loads the selected character image into the correct player ImageView.
      *
+     * <p>The game keeps one {@link ImageView} per player and swaps the image
+     * resource based on the selected character number stored in {@link Player}.
+     * This is called during every round reset so the sprites stay correct after
+     * replaying or returning from character selection.</p>
+     *
      * @param pNum player number whose image should be refreshed
+     * @see Player#getNBA()
      */
     public void playerNBAImage(int pNum){       //Depending on the key press, maps the image of the chosen NBA Character
         Player p = data.getPlayer(pNum);
@@ -760,7 +813,15 @@ public class FinalProj extends Application {
     /**
      * Resets both players, the ball, and possession for a new round.
      *
+     * <p>The player with possession starts closer to the bottom baseline. The
+     * defender starts above them, creating a predictable one-on-one setup after
+     * every make, miss, or block. This method also restarts the background music
+     * and clears any translation left by ball path animations.</p>
+     *
      * @param pNum player number that starts the next round with possession
+     * @implNote Player model coordinates are updated immediately after moving
+     * the ImageViews so shot and block calculations are correct before the next
+     * frame.
      */
     public void resetPos(int pNum){     //Resets the Position of everything, which is useful after each 'round' or each shot made
         Player p1 = data.getPlayer(1);
@@ -806,7 +867,13 @@ public class FinalProj extends Application {
     /**
      * Builds the in-game court screen for a new or resumed round.
      *
+     * <p>The live screen includes the court image, drawn three-point line, court
+     * lighting overlays, player ground effects, player sprites, basketball,
+     * scoreboard, and player tags. The center of the playfield stays clear so
+     * players can track movement and shots.</p>
+     *
      * @param pNum player number that starts with possession
+     * @see #resetPos(int)
      */
     public void setupState(int pNum){
         //Clearing the screen and adding the new images
@@ -875,8 +942,17 @@ public class FinalProj extends Application {
     /**
      * Registers keyboard controls for movement, shooting, and timed blocks.
      *
-     * <p>Movement is continuous through the game loop. Shoot/block keys are
-     * handled only on their initial press so holding a key does not spam shots.</p>
+     * <p>Movement keys are stored in {@code heldKeys} and applied by the
+     * animation timer for smooth continuous movement. Shoot/block keys are
+     * handled only on their initial press so holding a key does not spam shots.
+     * The same key is context-sensitive: it shoots when the player has
+     * possession and attempts a block when the opponent has possession.</p>
+     *
+     * <p>Player 1 uses {@code W/A/S/D} plus {@code E}; player 2 uses
+     * {@code I/J/K/L} plus {@code O}.</p>
+     *
+     * @implNote Block attempts are timestamped so the defender can press just
+     * before or just after the shooter within the configured timing window.
      */
     public void playerMoves(){
         // Clear any stale state from previous matches
@@ -1012,7 +1088,16 @@ public class FinalProj extends Application {
     /**
      * Starts a shot attempt for the player with possession.
      *
+     * <p>The method guards against duplicate shots while the ball is already in
+     * flight, records shot timing for block checks, runs the make/miss
+     * probability through {@link Player#makeOrMiss(Data)}, and starts the
+     * shooter and ball animations. If the defender already pressed block within
+     * the valid timing window and is in the shooting lane, the shot is blocked
+     * before the animation begins.</p>
+     *
      * @param pNum shooting player number
+     * @see #playerMoves()
+     * @see Player#makeOrMiss(Data)
      */
     public void shoot(int pNum){
         if (isBallInFlight){
@@ -1200,21 +1285,21 @@ public class FinalProj extends Application {
     /**
      * Completes a shot sequence and starts the next round or stats screen.
      *
+     * <p>Made shots let the shooter keep possession. Missed or blocked shots
+     * give possession to the other player. If either player has reached the
+     * winning score, the game loop stops and the stats screen is shown instead
+     * of resetting player positions.</p>
+     *
      * @param shooterNum player number that attempted the shot
      * @param made whether the shot was made
+     * @implNote This method always clears active shot state at the end so the
+     * next round can accept movement, shots, and block attempts normally.
      */
     public void finishRound(int shooterNum, boolean made){
         int nextPossession = 0;
         Player p1 = data.getPlayer(1);
         Player p2 = data.getPlayer(2);
 
-        //TODO
-        int prevP1Score = 0;
-        int prevP1ShotsMade = 0;
-        int prevP2Score = 0;
-        int prevP2ShotsMade = 0;
-
-        //TODO
         if (p1.getScore() >= 11 || p2.getScore() >= 11){
             gameRunning = false;
             gameEngine.stop();
@@ -1243,7 +1328,13 @@ public class FinalProj extends Application {
 
 
 
-    /** Shows the post-game score and shooting statistics. */
+    /**
+     * Shows the post-game score and shooting statistics.
+     *
+     * <p>The screen displays the winner, final score, shots made, shots missed,
+     * and total attempts for both players. It also provides actions to play
+     * again or quit the application.</p>
+     */
     public void statsScreen(){
         rootPane.getChildren().clear();
 
@@ -1389,6 +1480,10 @@ public class FinalProj extends Application {
     
     /**
      * Application entry point.
+     *
+     * <p>The JavaFX Maven plugin launches this class. The method prints the
+     * JavaFX runtime version for quick troubleshooting and then delegates to the
+     * JavaFX lifecycle.</p>
      *
      * @param args command-line arguments passed by JavaFX
      */

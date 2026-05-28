@@ -3,10 +3,19 @@ package com.example;
 import java.util.Scanner;
 
 /**
- * Holds match-level game state and probability calculations.
+ * Holds match-level game state and shot probability calculations.
  *
- * <p>{@code Data} owns the two player models, current possession, and the shot
- * probability formula used by the UI when a player shoots.</p>
+ * <p>{@code Data} is the central state object shared by the JavaFX controller
+ * and the player models. It owns the two {@link Player} instances, tracks which
+ * player currently has possession, and calculates make probability when a shot
+ * is attempted.</p>
+ *
+ * <p>The class intentionally keeps state small: rendering, animations, keyboard
+ * input, and round transitions live in {@link FinalProj}. This separation keeps
+ * gameplay math testable without starting JavaFX.</p>
+ *
+ * @see Player
+ * @see FinalProj
  */
 public class Data {
     private Player player1;
@@ -25,9 +34,15 @@ public class Data {
     /**
      * Creates or replaces one of the two players.
      *
-     * @param pNum player number, 1 or 2
+     * <p>This method is used during character selection and when resetting the
+     * game. If a player already exists for {@code pNum}, the old instance is
+     * replaced with a fresh {@link Player} model.</p>
+     *
+     * @param pNum player number, {@code 1} or {@code 2}
      * @param nba selected character number from the character-select screen
      * @param s starting score
+     * @apiNote Passing any player number other than {@code 1} or {@code 2} has
+     * no effect.
      */
     public void makePlayer(int pNum, int nba, int s) {
         Player player = new Player(pNum, nba, s);
@@ -42,8 +57,10 @@ public class Data {
     /**
      * Gets a player by game number.
      *
-     * @param pNum player number, 1 or 2
-     * @return the requested player
+     * @param pNum player number, {@code 1} or {@code 2}
+     * @return player 1 when {@code pNum == 1}; otherwise player 2
+     * @apiNote The current implementation treats every non-1 value as player 2
+     * because all runtime callers pass either {@code 1} or {@code 2}.
      */
     public Player getPlayer(int pNum) {
         if (pNum == 1) {
@@ -58,29 +75,38 @@ public class Data {
     }
 
     /**
-     * Console-only character selection helper retained from the original prototype.
+     * Runs console-based character selection for both players.
+     *
+     * <p>The JavaFX application does not call this method during normal play.
+     * It is retained from the original command-line prototype and can still be
+     * used for quick manual testing of {@link #makePlayer(int, int, int)}.</p>
+     *
+     * @apiNote Closing the scanner also closes {@link System#in}. This is fine
+     * for this prototype helper, but the JavaFX game should use the on-screen
+     * character-select flow instead.
      */
     public void selectPlayer() {
-        for (int i = 1; i < 3; i++) {
-            System.out.println(
-                    "Please enter which player you want to use: \n 1: LeBron James \n 2: Stephen Curry \n 3: Giannis Antetokounmpo \n 4: Kevin Durant \n 5: Luka Doncic");
-            Scanner scan = new Scanner(System.in);
-            int selection = scan.nextInt();
-            if (selection == 1) {
-                System.out.println("You have chosen LeBron James!");
-                makePlayer(i, 1, 0);
-            } else if (selection == 2) {
-                System.out.println("You have chosen Stephen Curry!");
-                makePlayer(i, 2, 0);
-            } else if (selection == 3) {
-                System.out.println("You have chosen Giannis Antetokounmpo!");
-                makePlayer(i, 3, 0);
-            } else if (selection == 4) {
-                System.out.println("You have chosen Kevin Durant!");
-                makePlayer(i, 4, 0);
-            } else if (selection == 5) {
-                System.out.println("You have chosen Luka Doncic!");
-                makePlayer(i, 5, 0);
+        try (Scanner scan = new Scanner(System.in)) {
+            for (int i = 1; i < 3; i++) {
+                System.out.println(
+                        "Please enter which player you want to use: \n 1: LeBron James \n 2: Stephen Curry \n 3: Giannis Antetokounmpo \n 4: Kevin Durant \n 5: Luka Doncic");
+                int selection = scan.nextInt();
+                if (selection == 1) {
+                    System.out.println("You have chosen LeBron James!");
+                    makePlayer(i, 1, 0);
+                } else if (selection == 2) {
+                    System.out.println("You have chosen Stephen Curry!");
+                    makePlayer(i, 2, 0);
+                } else if (selection == 3) {
+                    System.out.println("You have chosen Giannis Antetokounmpo!");
+                    makePlayer(i, 3, 0);
+                } else if (selection == 4) {
+                    System.out.println("You have chosen Kevin Durant!");
+                    makePlayer(i, 4, 0);
+                } else if (selection == 5) {
+                    System.out.println("You have chosen Luka Doncic!");
+                    makePlayer(i, 5, 0);
+                }
             }
         }
     }
@@ -88,7 +114,12 @@ public class Data {
     /**
      * Gets the player number that currently has the ball.
      *
-     * @return 1 for player 1, 2 for player 2, or 0 if possession is invalid
+     * <p>Possession controls which sprite the ball follows in the animation
+     * loop and which player is allowed to start a shot when the shoot key is
+     * pressed.</p>
+     *
+     * @return {@code 1} for player 1, {@code 2} for player 2, or {@code 0} if
+     * possession is invalid
      */
     public int getPossession() {
         if (possession == 1) {
@@ -102,6 +133,11 @@ public class Data {
     /**
      * Sets possession to a specific player.
      *
+     * <p>The JavaFX controller calls this after made shots, misses, blocks, and
+     * round resets. The method only changes the stored possession value; moving
+     * the visible ball is handled by {@link FinalProj#switchPossession(int, boolean)}
+     * and the animation loop.</p>
+     *
      * @param possessionState player number that should receive possession
      */
     public void swapPossession(int possessionState){        //Either Player 1 or 2
@@ -111,7 +147,12 @@ public class Data {
     /**
      * Calculates the distance between the two players.
      *
-     * @return distance in pixels
+     * <p>The distance uses the center coordinates stored in each {@link Player}.
+     * It is used as a defender-spacing factor in {@link #distanceProb(int, int)}:
+     * a defender who is closer applies more pressure than a defender who is far
+     * away.</p>
+     *
+     * @return Euclidean distance between player centers, in pixels
      */
     public double getDistBetwnPlayers() {       //Distance Formula
         double distance = Math.sqrt(Math.pow(player1.getPlayerX() - player2.getPlayerX(), 2) + Math.pow(player1.getPlayerY() - player2.getPlayerY(), 2));
@@ -121,12 +162,25 @@ public class Data {
     /**
      * Calculates the chance that a shot goes in.
      *
-     * <p>Durant, character 3, gets a special 90% make chance. Other players use
-     * distance from the hoop, selected character stats, and defender spacing.</p>
+     * <p>Durant, character {@code 3}, gets a special flat {@code 0.90} make
+     * chance. All other characters use a formula based on three ingredients:</p>
      *
-     * @param pNum shooting player number
-     * @param shotType 1 for three-point, 2 for midrange, 3 for layup
-     * @return make probability between 0.05 and 0.92 for normal players, or 0.90 for Durant
+     * <ol>
+     *   <li>Distance from the hoop, where closer shots are easier.</li>
+     *   <li>Defender spacing, where more space preserves more of the base chance.</li>
+     *   <li>Character shooting stats from {@code shooting_pct}.</li>
+     * </ol>
+     *
+     * <p>The returned number is a probability suitable for comparison with
+     * {@link Math#random()}.</p>
+     *
+     * @param pNum shooting player number, {@code 1} or {@code 2}
+     * @param shotType {@code 1} for three-point, {@code 2} for midrange,
+     *                 {@code 3} for layup
+     * @return make probability between {@code 0.05} and {@code 0.92} for normal
+     * players, or exactly {@code 0.90} for Durant
+     * @implNote The defensive multiplier bottoms out at {@code 0.70}; this keeps
+     * close shots easier than deep shots even when a defender is nearby.
      */
     public double distanceProb(int pNum, int shotType){
         Player p = (pNum == 1) ? player1 : player2;
@@ -168,15 +222,25 @@ public class Data {
     /**
      * Placeholder for an older steal mechanic.
      *
+     * <p>The current live game uses timed block attempts in {@link FinalProj}
+     * instead of this method. It remains here only so older prototype code and
+     * notes still have a documented landing point.</p>
+     *
      * @param pNum defending player number
      * @return always {@code true}; the live game now uses timed block attempts instead
+     * @deprecated the active game uses {@link FinalProj#playerMoves()} and its
+     * timed block flow instead of steals
      */
+    @Deprecated
     public boolean stealProb(int pNum){
         return true;
     }
 
-    //Any other Methods to add?
-
+    /**
+     * Console entry point for the prototype selection flow.
+     *
+     * @param args command-line arguments, not used
+     */
     public static void main(String[] args) {
         Data bballData = new Data();
         bballData.selectPlayer();
